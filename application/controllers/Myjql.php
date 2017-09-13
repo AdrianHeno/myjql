@@ -165,6 +165,129 @@ class Myjql extends CI_Controller {
 	
 	function get_current_sprint($username, $password, $project){//get the current sprint for a project
 		$result = $this->jql($username, $password, 'project = ' . $project . ' and Sprint in(openSprints())');
-		echo $result;
+		return $result;
+	}
+	
+	function burndown($username, $password, $project){//This is a proof of concept and will need to be reworked if deemed worth the effort
+		$current_sprint_id = $this->get_current_sprint_id($username, $password, $project);
+		
+		set_time_limit(600);
+		$return_json = TRUE;
+		//Call the atlassian graph data API
+		$url = "https://mentally-friendly.atlassian.net/rest/greenhopper/1.0/rapid/charts/scopechangeburndownchart.json?rapidViewId=12&sprintId=" . $current_sprint_id . "&statisticFieldId=field_timeoriginalestimate";
+		$curl = curl_init();
+		curl_setopt($curl, CURLOPT_HTTPHEADER, array('Authorization: Basic ' . base64_encode("$username:$password")));
+		curl_setopt($curl, CURLOPT_URL, $url);
+		curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
+		curl_setopt($curl, CURLOPT_FOLLOWLOCATION, 1);
+		curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, 0);
+		curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, 0);
+		curl_setopt($curl, CURLOPT_VERBOSE, true);
+		$verbose = fopen('php://temp', 'rw+');
+		curl_setopt($curl, CURLOPT_STDERR, $verbose);
+		
+		$data = (curl_exec($curl));
+		$data = json_decode($data);
+		#echo $data;
+		$total_seconds = 0;
+		$sprint_start_date = '3000-12-31';
+		$sprint_end_date = '2000-12-31';
+		foreach($data->workRateData->rates as $rates){
+			//Atlassian store ther unix time stamp as number of miliseconds since epoch -.-
+			if(date("Y-m-d", substr($rates->start, 0, -3)) < $sprint_start_date){//Find sprint start date
+				$sprint_start_date = date("Y-m-d", substr($rates->start, 0, -3));
+			}
+			if(date("Y-m-d", substr($rates->end, 0, -3)) > $sprint_end_date){//Find sprint end date
+				$sprint_end_date = date("Y-m-d", substr($rates->end, 0, -3));
+			}
+		}
+
+		echo $sprint_start_date;
+		echo "<hr />";
+		echo $sprint_end_date;
+		echo "<hr />";
+		$issue_array = array();
+		foreach($data->changes as $key => $changes){
+			if(isset($changes[0]->statC->newValue)){
+				$total_seconds = $total_seconds + $changes[0]->statC->newValue;//If the changes has hours add them to the total
+				$issue_array[$changes[0]->key]['value'] = $changes[0]->statC->newValue;
+			}
+			if(isset($changes[0]->column->done) && $changes[0]->column->done == 'true'){
+				$issue_array[$changes[0]->key]['done'] = date("Y-m-d", substr($key, 0, -3));
+			}
+		}
+		$total_hours = ($total_seconds/60)/60;
+		echo $total_hours;
+		print_r($issue_array);
+		
+		/*
+		 *Find how many week days there are between sprint start and sprint end
+		 *Add these days to an array that we can use to contain our burndown progress
+		 */
+		$sprint_days = array();
+		$begin = new DateTime( $sprint_start_date );
+		$end = new DateTime( $sprint_end_date );
+		$end = $end->modify( '+1 day' ); 
+		
+		$interval = new DateInterval('P1D');
+		$daterange = new DatePeriod($begin, $interval ,$end);
+		
+		foreach($daterange as $date){
+			if($date->format("l") !== "Saturday" && $date->format("l") !== "Sunday"){//Don't include weekends
+				$sprint_days[$date->format("Y-m-d")] = 0;
+			}
+		}
+		
+		
+		/*
+		 *Now that we have an array of days and an array of issues, loop through the array of issues and add their value to the total for each day
+		 */
+		
+		foreach($issue_array as $issue){
+			if(isset($issue['done'])){
+				$sprint_days[$issue['done']] = $sprint_days[$issue['done']] + $issue['value'];
+			}
+		}
+		print_r($sprint_days);
+		
+		/*
+		 *Now that we have all of the data in a useable format, build the graph URL
+		 */
+		
+		$bench_increment = round($total_hours/count($sprint_days), 2);
+		$bench_daily = $total_hours;
+		echo $bench_increment;
+		$bench_string = "";
+		while($bench_daily > 0){//Create a string for the linear line for the optimal burndown bench mark
+			$bench_string = $bench_string . round($bench_daily, 0) . ",";
+			$bench_daily = $bench_daily - $bench_increment;//Reduce increment as we count down
+		}
+		$bench_string = $bench_string . "0";
+		
+		$progress_string = "";
+		$progress_total = $total_hours;
+		foreach($sprint_days as $sprint_day){//Create a string for the sprint progress burn down
+			$progress_total = $progress_total - (($sprint_day/60)/60);//Convert from seconds to hours and then subtract from total
+			$progress_string = $progress_string . "," . $progress_total;
+		}
+		
+		$progress_string = $total_hours . $progress_string;
+		
+		echo "<hr />";
+		echo $bench_string;
+		echo "<hr />";
+		echo $progress_string;
+		#header("Location: https://chart.googleapis.com/chart?cht=lc&chg=10,10,3,2&chd=t:" . $bench_string . "|" . $progress_string . "&chs=500x500&chco=666666,FF0000&chxt=x,y&chxr=0," . count($sprint_days) . ",0|1,0," . $total_hours);
+	}
+	
+	function get_current_sprint_id($username, $password, $project){//Get the current sprint ID for a project
+		$jql_result = json_decode($this->get_current_sprint($username, $password, $project));//Get the current sprint for the project
+
+		foreach($jql_result->issues as $issue){//We only need to check 1 of the issues not all
+			$sprint_string = explode("[id=", $issue->fields->customfield_10115[0]); //The ID is stored in a string with a bunch of other cruft
+			$sprint_id = explode(",",$sprint_string[1]);
+			return $sprint_id[0];
+			break;//We have what we need, break out of loop
+		}
 	}
 }
