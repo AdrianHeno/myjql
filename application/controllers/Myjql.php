@@ -202,10 +202,6 @@ class Myjql extends CI_Controller {
 			}
 		}
 
-		echo $sprint_start_date;
-		echo "<hr />";
-		echo $sprint_end_date;
-		echo "<hr />";
 		$issue_array = array();
 		foreach($data->changes as $key => $changes){
 			if(isset($changes[0]->statC->newValue)){
@@ -217,8 +213,6 @@ class Myjql extends CI_Controller {
 			}
 		}
 		$total_hours = ($total_seconds/60)/60;
-		echo $total_hours;
-		print_r($issue_array);
 		
 		/*
 		 *Find how many week days there are between sprint start and sprint end
@@ -248,7 +242,6 @@ class Myjql extends CI_Controller {
 				$sprint_days[$issue['done']] = $sprint_days[$issue['done']] + $issue['value'];
 			}
 		}
-		print_r($sprint_days);
 		
 		/*
 		 *Now that we have all of the data in a useable format, build the graph URL
@@ -256,7 +249,7 @@ class Myjql extends CI_Controller {
 		
 		$bench_increment = round($total_hours/count($sprint_days), 2);
 		$bench_daily = $total_hours;
-		echo $bench_increment;
+
 		$bench_string = "";
 		while($bench_daily > 0){//Create a string for the linear line for the optimal burndown bench mark
 			$bench_string = $bench_string . round($bench_daily, 0) . ",";
