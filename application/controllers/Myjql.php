@@ -266,18 +266,45 @@ class Myjql extends CI_Controller {
 		
 		$progress_string = "";
 		$progress_total = $total_hours;
-		foreach($sprint_days as $sprint_day){//Create a string for the sprint progress burn down
+		foreach($sprint_days as $key => $sprint_day){//Create a string for the sprint progress burn down
+			if($key > date("Y-m-d")){//Line needs to stop after today so break the loop if the $key is greater than today
+				break;
+			}
 			$progress_total = $progress_total - (($sprint_day/60)/60);//Convert from seconds to hours and then subtract from total
 			$progress_string = $progress_string . "," . $progress_total;
 		}
-		
 		$progress_string = $total_hours . $progress_string;
 		
 		echo "<hr />";
 		echo $bench_string;
 		echo "<hr />";
 		echo $progress_string;
-		#header("Location: https://chart.googleapis.com/chart?cht=lc&chg=10,10,3,2&chd=t:" . $bench_string . "|" . $progress_string . "&chs=500x500&chco=666666,FF0000&chxt=x,y&chxr=0," . count($sprint_days) . ",0|1,0," . $total_hours);
+		//Using Image Charts to generate graphs https://image-charts.com/documentation
+		header("Location: https://image-charts.com/chart?cht=lc&chg=10,10,3,2&chd=t:" . $bench_string . "|" . $progress_string . "&chds=0," . $total_hours . "&chs=500x500&chco=999999,FF0000&chxt=x,y&chxr=0," . count($sprint_days) . ",0|1,0," . $total_hours  . "&chma=30,30,30,30");
+	}
+	
+	function extended_Encode($values, $max = -1, $min = 0) {
+		$encoding = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-.';
+		$rangemax = 4095;
+		$chartdata = '';
+		if ($max < 0) {
+			$max = max($values);
+		}
+		//If max is smaller than the largest value, it will go beyond range allowed by the encoding (0..4095)
+		if ($max < max($values)) {
+			$max = max($values);
+		}
+		$range = $max - $min;
+		$scale = $rangemax / $range;
+		foreach ($values as $k => $v){
+			if (!is_null($v) and $v >= $min && $v <= $max) {
+				$scaledvalue = ($v - $min) * $scale;
+				$chartdata .= $encoding[floor($scaledvalue / 64)].$encoding[$scaledvalue % 64];
+			} else {
+				$chartdata .= '__'; // Value out of max range;
+			}
+		}
+		return($chartdata);
 	}
 	
 	function get_current_sprint_id($username, $password, $project){//Get the current sprint ID for a project
