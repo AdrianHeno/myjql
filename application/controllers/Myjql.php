@@ -276,9 +276,15 @@ class Myjql extends CI_Controller {
 		 *Create array to house payload for slack
 		 */
 		$slack_payload = array (
-			"username" => "Test",
-			"text" => "Sprint Burn Down",
-			"mrkdwn" => true
+			'attachments' => 
+			array (
+				'fallback' => 'Burndown Chart',
+				'color' => '#36a64f',
+				'title' => 'Burn Down',
+				'title_link' => $chart_url,
+				'image_url' => $chart_url,
+				'thumb_url' => $chart_url,
+			),
 		);
 		
 		//Send encode and send the payload
