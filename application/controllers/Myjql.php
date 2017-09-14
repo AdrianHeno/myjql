@@ -288,6 +288,7 @@ class Myjql extends CI_Controller {
 		 *Create array to house payload for slack
 		 */
 		$slack_payload = array (
+			"response_type" => "in_channel",
 			'attachments' => 
 			array (
 				0 =>
