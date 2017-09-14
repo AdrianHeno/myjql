@@ -293,9 +293,9 @@ class Myjql extends CI_Controller {
 			array (
 				0 =>
 				array(
-					'fallback' => $_GET['text'] . 'Burndown Chart',
+					'fallback' => $_GET['text'] . ' Current Sprint Burndown Chart',
 					'color' => '#36a64f',
-					'title' => $_GET['text'] . 'Burn Down',
+					'title' => $_GET['text'] . ' Current Sprint Burn Down',
 					'title_link' => $chart_url,
 					'image_url' => $chart_url,
 					'thumb_url' => $chart_url
