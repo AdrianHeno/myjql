@@ -168,6 +168,7 @@ class Myjql extends CI_Controller {
 		return $result;
 	}
 	
+//TODO: Some security!
 	function burndown($username, $password){//This is a proof of concept and will need to be reworked if deemed worth the effort
 		if(!isset($_GET['text']) || strlen($_GET['text']) < 3){ //Check if $_GET['text'] wass passed in, if not send error message and die
 			$slack_payload = array (
@@ -201,7 +202,8 @@ class Myjql extends CI_Controller {
 		$data = (curl_exec($curl));
 		$data = json_decode($data);
 		#echo $data;
-		$total_seconds = 0;
+		
+		//Define the sprint timebox
 		$sprint_start_date = '3000-12-31';
 		$sprint_end_date = '2000-12-31';
 		foreach($data->workRateData->rates as $rates){
@@ -214,6 +216,8 @@ class Myjql extends CI_Controller {
 			}
 		}
 
+		//Find how much of the sprint has been completed
+		$total_seconds = 0;
 		$issue_array = array();
 		foreach($data->changes as $key => $changes){
 			if(isset($changes[0]->statC->newValue)){
@@ -224,10 +228,10 @@ class Myjql extends CI_Controller {
 				$issue_array[$changes[0]->key]['done'] = date("Y-m-d", substr($key, 0, -3));
 			}
 		}
-		$total_hours = ($total_seconds/60)/60;
+		$total_hours = ($total_seconds/60)/60;//Convert time from seconds to hours
 		
 		/*
-		 *Find how many week days there are between sprint start and sprint end
+		 *Find how many week days there are between sprint start and sprint end excluding weekends
 		 *Add these days to an array that we can use to contain our burndown progress
 		 */
 		$sprint_days = array();
@@ -246,7 +250,8 @@ class Myjql extends CI_Controller {
 		
 		
 		/*
-		 *Now that we have an array of days and an array of issues, loop through the array of issues and add their value to the total for each day
+		 *Now that we have an array of days and an array of issues,
+		 *loop through the array of issues and add their value to the total for each day
 		 */
 		
 		foreach($issue_array as $issue){
@@ -272,7 +277,7 @@ class Myjql extends CI_Controller {
 		$progress_string = "";
 		$progress_total = $total_hours;
 		foreach($sprint_days as $key => $sprint_day){//Create a string for the sprint progress burn down
-			if($key > date("Y-m-d")){//Line needs to stop after today so break the loop if the $key is greater than today
+			if($key > $this->get_day_in_sydney){//Line needs to stop after today so break the loop if the $key is greater than today
 				break;
 			}
 			$progress_total = $progress_total - (($sprint_day/60)/60);//Convert from seconds to hours and then subtract from total
@@ -288,7 +293,7 @@ class Myjql extends CI_Controller {
 		 *Create array to house payload for slack
 		 */
 		$slack_payload = array (
-			"response_type" => "in_channel",
+			"response_type" => "in_channel",//This determines if the responce should be seen by all channel occuments or just the requester
 			'attachments' => 
 			array (
 				0 =>
@@ -307,6 +312,14 @@ class Myjql extends CI_Controller {
 		header('Content-Type: application/json');
 		echo json_encode($slack_payload);
 		
+	}
+	
+	function get_day_in_sydney(){//The server is in the USA so today isn't starting until 2pm. We need today to start at 12am
+		$tz = 'Australia/Sydney';
+		$timestamp = time();
+		$dt = new DateTime("now", new DateTimeZone($tz)); //first argument "must" be a string
+		$dt->setTimestamp($timestamp);
+		return $dt->format('Y-m-d');
 	}
 	
 	
