@@ -279,12 +279,15 @@ class Myjql extends CI_Controller {
 		$slack_payload = array (
 			'attachments' => 
 			array (
-				'fallback' => 'Burndown Chart',
-				'color' => '#36a64f',
-				'title' => 'Burn Down',
-				'title_link' => $chart_url,
-				'image_url' => $chart_url,
-				'thumb_url' => $chart_url,
+				0 =>
+				array(
+					'fallback' => 'Burndown Chart',
+					'color' => '#36a64f',
+					'title' => 'Burn Down',
+					'title_link' => $chart_url,
+					'image_url' => $chart_url,
+					'thumb_url' => $chart_url
+				),
 			),
 		);
 		
