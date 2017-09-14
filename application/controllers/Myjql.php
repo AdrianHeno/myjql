@@ -277,7 +277,7 @@ class Myjql extends CI_Controller {
 		$progress_string = "";
 		$progress_total = $total_hours;
 		foreach($sprint_days as $key => $sprint_day){//Create a string for the sprint progress burn down
-			if($key > $this->get_day_in_sydney){//Line needs to stop after today so break the loop if the $key is greater than today
+			if($key > $this->get_day_in_sydney()){//Line needs to stop after today so break the loop if the $key is greater than today
 				break;
 			}
 			$progress_total = $progress_total - (($sprint_day/60)/60);//Convert from seconds to hours and then subtract from total
