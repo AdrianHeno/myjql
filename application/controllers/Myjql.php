@@ -168,9 +168,20 @@ class Myjql extends CI_Controller {
 		return $result;
 	}
 	
-	function burndown($username, $password, $project){//This is a proof of concept and will need to be reworked if deemed worth the effort
+	function burndown($username, $password){//This is a proof of concept and will need to be reworked if deemed worth the effort
+		if(!isset($_GET['text']) || strlen($_GET['text']) < 3){ //Check if $_GET['text'] wass passed in, if not send error message and die
+			$slack_payload = array (
+			'attachments' => 'Please supply a valid project name after the /burndown'
+		);
 		
-		$current_sprint_id = $this->get_current_sprint_id($username, $password, $project);
+		//Send encode and send the payload
+		header('Content-Type: application/json');
+		echo json_encode($slack_payload);
+		
+		die();
+		}
+		
+		$current_sprint_id = $this->get_current_sprint_id($username, $password, $_GET['text']);
 		
 		set_time_limit(600);
 		$return_json = TRUE;
@@ -271,7 +282,7 @@ class Myjql extends CI_Controller {
 
 		//Using Image Charts to generate graphs https://image-charts.com/documentation
 		$chart_url = "https://image-charts.com/chart?cht=lc&chg=10,10,3,2&chd=t:" . $bench_string . "|" . $progress_string . "&chds=0," . $total_hours . "&chs=500x500&chco=999999,FF0000&chxt=x,y&chxr=0," . count($sprint_days) . ",0|1,0," . $total_hours  . "&chma=30,30,30,30";
-		#header("Location: https://image-charts.com/chart?cht=lc&chg=10,10,3,2&chd=t:" . $bench_string . "|" . $progress_string . "&chds=0," . $total_hours . "&chs=500x500&chco=999999,FF0000&chxt=x,y&chxr=0," . count($sprint_days) . ",0|1,0," . $total_hours  . "&chma=30,30,30,30");
+	
 		
 		/*
 		 *Create array to house payload for slack
