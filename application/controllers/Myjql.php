@@ -171,7 +171,7 @@ class Myjql extends CI_Controller {
 	function burndown($username, $password){//This is a proof of concept and will need to be reworked if deemed worth the effort
 		if(!isset($_GET['text']) || strlen($_GET['text']) < 3){ //Check if $_GET['text'] wass passed in, if not send error message and die
 			$slack_payload = array (
-			'attachments' => 'Please supply a valid project name after the /burndown'
+			'text' => 'Please supply a valid project name after the /burndown'
 		);
 		
 		//Send encode and send the payload
