@@ -274,38 +274,11 @@ class Myjql extends CI_Controller {
 			$progress_string = $progress_string . "," . $progress_total;
 		}
 		$progress_string = $total_hours . $progress_string;
-		
-		echo "<hr />";
-		echo $bench_string;
-		echo "<hr />";
-		echo $progress_string;
+
 		//Using Image Charts to generate graphs https://image-charts.com/documentation
 		header("Location: https://image-charts.com/chart?cht=lc&chg=10,10,3,2&chd=t:" . $bench_string . "|" . $progress_string . "&chds=0," . $total_hours . "&chs=500x500&chco=999999,FF0000&chxt=x,y&chxr=0," . count($sprint_days) . ",0|1,0," . $total_hours  . "&chma=30,30,30,30");
 	}
 	
-	function extended_Encode($values, $max = -1, $min = 0) {
-		$encoding = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-.';
-		$rangemax = 4095;
-		$chartdata = '';
-		if ($max < 0) {
-			$max = max($values);
-		}
-		//If max is smaller than the largest value, it will go beyond range allowed by the encoding (0..4095)
-		if ($max < max($values)) {
-			$max = max($values);
-		}
-		$range = $max - $min;
-		$scale = $rangemax / $range;
-		foreach ($values as $k => $v){
-			if (!is_null($v) and $v >= $min && $v <= $max) {
-				$scaledvalue = ($v - $min) * $scale;
-				$chartdata .= $encoding[floor($scaledvalue / 64)].$encoding[$scaledvalue % 64];
-			} else {
-				$chartdata .= '__'; // Value out of max range;
-			}
-		}
-		return($chartdata);
-	}
 	
 	function get_current_sprint_id($username, $password, $project){//Get the current sprint ID for a project
 		$jql_result = json_decode($this->get_current_sprint($username, $password, $project));//Get the current sprint for the project
