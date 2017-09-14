@@ -269,7 +269,29 @@ class Myjql extends CI_Controller {
 		$progress_string = $total_hours . $progress_string;
 
 		//Using Image Charts to generate graphs https://image-charts.com/documentation
-		header("Location: https://image-charts.com/chart?cht=lc&chg=10,10,3,2&chd=t:" . $bench_string . "|" . $progress_string . "&chds=0," . $total_hours . "&chs=500x500&chco=999999,FF0000&chxt=x,y&chxr=0," . count($sprint_days) . ",0|1,0," . $total_hours  . "&chma=30,30,30,30");
+		$chart_url = "https://image-charts.com/chart?cht=lc&chg=10,10,3,2&chd=t:" . $bench_string . "|" . $progress_string . "&chds=0," . $total_hours . "&chs=500x500&chco=999999,FF0000&chxt=x,y&chxr=0," . count($sprint_days) . ",0|1,0," . $total_hours  . "&chma=30,30,30,30";
+		#header("Location: https://image-charts.com/chart?cht=lc&chg=10,10,3,2&chd=t:" . $bench_string . "|" . $progress_string . "&chds=0," . $total_hours . "&chs=500x500&chco=999999,FF0000&chxt=x,y&chxr=0," . count($sprint_days) . ",0|1,0," . $total_hours  . "&chma=30,30,30,30");
+		
+		/*
+		 *Create array to house payload for slack
+		 */
+		$slack_payload = array (
+			'attachments' => 
+			array (
+			  0 => 
+			  array (
+					'fallback' => 'Burndown Chart',
+					'color' => '#36a64f',
+					'title' => 'Burn Down',
+					'title_link' => $chart_url,
+					'image_url' => $chart_url,
+					'thumb_url' => $chart_url,
+				),
+			),
+		);
+		
+		//Send encode and send the payload
+		echo json_encode($slack_payload);
 	}
 	
 	
