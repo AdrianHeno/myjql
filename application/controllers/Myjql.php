@@ -197,7 +197,7 @@ class Myjql extends CI_Controller {
 						}
 					]
 				}';
-
+	header('Content-Type: application/json');
 	echo $slack_json;
 		die();
 		
