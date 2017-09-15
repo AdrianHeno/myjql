@@ -163,13 +163,14 @@ class Myjql extends CI_Controller {
 		$this->load->view('web_safe_jql_result', $data);
 	}
 	
-	function get_current_sprint($username, $password, $project){//get the current sprint for a project
+	private function get_current_sprint($username, $password, $project){//get the current sprint for a project
 		$result = $this->jql($username, $password, 'project = ' . $project . ' and Sprint in(openSprints())');
 		return $result;
 	}
 	
-//TODO: Some security!
-	function burndown($username, $password){//This is a proof of concept and will need to be reworked if deemed worth the effort
+	function burndown(){//This is a proof of concept and will need to be reworked if deemed worth the effort
+		$username = $this->config->item('jira_username');
+		$password = $this->config->item('jira_password');
 		if(!isset($_GET['text']) || strlen($_GET['text']) < 3){ //Check if $_GET['text'] wass passed in, if not send error message and die
 			$slack_payload = array (
 			'text' => 'Please supply a valid project name after the /burndown'
@@ -323,7 +324,7 @@ class Myjql extends CI_Controller {
 	}
 	
 	
-	function get_current_sprint_id($username, $password, $project){//Get the current sprint ID for a project
+	private function get_current_sprint_id($username, $password, $project){//Get the current sprint ID for a project
 		$jql_result = json_decode($this->get_current_sprint($username, $password, $project));//Get the current sprint for the project
 
 		foreach($jql_result->issues as $issue){//We only need to check 1 of the issues not all
