@@ -173,14 +173,14 @@ class Myjql extends CI_Controller {
 		$password = $this->config->item('jira_password');
 		if(!isset($_GET['text']) || strlen($_GET['text']) < 3){ //Check if $_GET['text'] wass passed in, if not send error message and die
 			$slack_payload = array (
-			'text' => 'Please supply a valid project name after the /burndown'
-		);
+				'text' => 'Please supply a valid project name after the /burndown'
+			);
 		
-		//Send encode and send the payload
-		header('Content-Type: application/json');
-		echo json_encode($slack_payload);
-		
-		die();
+			//Send encode and send the payload
+			header('Content-Type: application/json');
+			echo json_encode($slack_payload);
+			
+			die();
 		}
 		
 		$current_sprint_id = $this->get_current_sprint_id($username, $password, $_GET['text']);
