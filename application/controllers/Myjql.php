@@ -169,13 +169,16 @@ class Myjql extends CI_Controller {
 			$slack_payload = array (
 				'text' => 'Please supply a valid project name after the /artefacts'
 			);
-		
-			//Send encode and send the payload
-			header('Content-Type: application/json');
-			echo json_encode($slack_payload);
 			
 			die();
+		}else{
+			$slack_payload = array (
+				'text' => 'Working on that for you now, I will let you know when I have finished.'
+			);
 		}
+		//Slack only gives us 3 seconds to respond...Nothing happens in Jira in under 3 seconds, so send a responce once validation passes and then use the responce url to notify the user once the operation is complete
+		header('Content-Type: application/json');
+		echo json_encode($slack_payload);//Send a payload back to slack so that the user knows that we are working
 		
 		$assignee_override = array();
 		if($project_key == null && isset($_GET['text'])){//If project key is null an $_GET is set then this is a request from slack and not a direct call to the URL. Validation above should have taken care of that anyway with the token
@@ -212,12 +215,34 @@ class Myjql extends CI_Controller {
 			}
 		}
 		$slack_payload = array (
-			'text' => $issues_created . ' JIRA Issues Created'
+			'text' => $issues_created . ' JIRA Issues Created. Have a great day!'
 		);
 	
 		//Send encode and send the payload
-		header('Content-Type: application/json');
-		echo json_encode($slack_payload);
+		$this->post_to_slack($_GET['response_url'], $slack_payload);
+	}
+	
+	/*
+	 *A function to take cate of posting delayed responces to slack
+	 */
+	private function post_to_slack($url, $payload){
+		$curl = curl_init($url);
+		curl_setopt($curl, CURLOPT_HEADER, false);
+		curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+		curl_setopt($curl, CURLOPT_HTTPHEADER,
+				array("Content-type: application/json"));
+		curl_setopt($curl, CURLOPT_POST, true);
+		curl_setopt($curl, CURLOPT_POSTFIELDS, $payload);
+		
+		$json_response = curl_exec($curl);
+		
+		$status = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+		
+		if ( $status != 201 ) {
+			die("Error: call to URL $url failed with status $status, response $json_response, curl_error " . curl_error($curl) . ", curl_errno " . curl_errno($curl));
+		}
+		
+		curl_close($curl);
 	}
 	
 	public function web_safe_jql_form(){ //Loads form for generating a JQL Websafe GET string
