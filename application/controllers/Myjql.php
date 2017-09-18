@@ -17,7 +17,7 @@ class Myjql extends CI_Controller {
 	function jql($username = null, $password = null, $jql = null){//Performs JQL request, returns either a view or object
 		$return_json = FALSE;
 		set_time_limit(600);
-		if(isset($username) && isset($password) && isset($jql)){
+		if(isset($username) && isset($password) && isset($jql)){//if this is being called by another function return json
 			$jql = $this->jql_convert($jql);
 			$return_json = TRUE;
 		}else{
@@ -59,78 +59,37 @@ class Myjql extends CI_Controller {
 		$this->load->view('jql_auto_create_form', $data);
 	}
 	
-	function create_issue(){//creates multimple issues from json object
-		$username = $_POST['name'];
-		$password = $_POST['password'];
-		$sprint = $_POST['sprint'];
+	private function create_meeting_issue($project_id, $sprint_id, $assignee){//creates multimple issues from json object
+		$username = $this->config->item('jira_username');
+		$password = $this->config->item('jira_password');
 		//define json payload
 		$data_string = '{"issueUpdates": [
 						{
 							"fields": {
 							   "project":
 							   { 
-								  "id": "10800"
+								  "id": "' . $project_id . '"
 							   },
-							   "summary": "Assisting team with development tasks",
-							   "description": "[~paul] to assist other team members during sprint ' . $sprint . '",
+							   "summary": "--Sprint Meetings--",
+							   "description": "Time for sprint artefacts",
 							   "issuetype": {
-								  "id": "3"
+								  "id": "10100"
 							   },
-							   "customfield_10100":	'. $sprint .',
-							   "customfield_10500":	"SPCOR-3388",
+							   "customfield_10115":	'. $sprint_id .',
 							    "assignee": {
-									"name": "paul"
+									"name": "' . $assignee . '"
 								},
 							   "timetracking": {
-									"originalEstimate": "1.5d"
-								}
-						   }
-						},
-						{
-						   "fields": {
-							   "project":
-							   { 
-								  "id": "10800"
-							   },
-							   "summary": "Mid Sprint Code Review",
-							   "description": "[~stuart] to review the work of the team for sprint ' . $sprint . '",
-							   "issuetype": {
-								  "id": "3"
-							   },
-							   "customfield_10100":	'. $sprint .',
-							   "customfield_10500":	"SPCOR-3388",
-							   "assignee": {
-									"name": "stuart"
+									"originalEstimate": "12.5h"
 								},
-							   "timetracking": {
-									"originalEstimate": "1d"
-								}
-						   }
-						},
-						{
-						   "fields": {
-							   "project":
-							   { 
-								  "id": "10800"
-							   },
-							   "summary": "Assisting team with development tasks",
-							   "description": "[~stuart] to assist other team members during sprint ' . $sprint . '",
-							   "issuetype": {
-								  "id": "3"
-							   },
-							   "customfield_10100":	'. $sprint .',
-							   "customfield_10500":	"SPCOR-3388",
-							   "assignee": {
-									"name": "stuart"
-								},
-							   "timetracking": {
-									"originalEstimate": "1d"
-								}
+								"labels":[
+									"Meetings"
+								]
 						   }
 						}
 					]}';
 		
-		$url = "https://tempurer.atlassian.net/rest/api/2/issue/bulk";
+		$url = $this->config->item('jira_base_url') . "issue/bulk";
 		$curl = curl_init();
 		
 		curl_setopt($curl, CURLOPT_HTTPHEADER, array(
@@ -148,8 +107,117 @@ class Myjql extends CI_Controller {
 		curl_setopt($curl, CURLOPT_VERBOSE, true);
 		
 		$result = curl_exec($curl);
-		echo $result;
+		return true;
 		
+	}
+	
+	private function jira_connect($resource = array()){//Takes an array containing the specifics of the end point
+		if(stripos($resource[0], 'board') !== FALSE){//Unfortunately the JIRA Rest 2.0 doesn't include board endpoints, to get these we need to use the old 1.0 API
+			$jira_url = $this->config->item('jira_base_url_v1');
+		}else{
+			$jira_url = $this->config->item('jira_base_url');
+		}
+		
+		$url = $jira_url . implode("/", $resource);//Inplode the array to buld the URI
+
+		$username = $this->config->item('jira_username');
+		$password = $this->config->item('jira_password');
+		//Do cURL stuff
+		$curl = curl_init();
+		curl_setopt($curl, CURLOPT_HTTPHEADER, array('Authorization: Basic ' . base64_encode("$username:$password")));
+		curl_setopt($curl, CURLOPT_URL, $url);
+		curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
+		curl_setopt($curl, CURLOPT_FOLLOWLOCATION, 1);
+		curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, 0);
+		curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, 0);
+		curl_setopt($curl, CURLOPT_VERBOSE, true);
+		$verbose = fopen('php://temp', 'rw+');
+		curl_setopt($curl, CURLOPT_STDERR, $verbose);
+		
+		$result = (curl_exec($curl));
+		return json_decode($result);
+	}
+	
+	function get_project($project_key){//Get project by KEY eg WINE
+		$project = $this->jira_connect(array('project', $project_key));
+		return $project;
+	}
+	
+	function get_boards($project_key){//Get all agile boards for a project
+		$boards = $this->jira_connect(array('board?projectKeyOrId=' . $project_key));
+		return $boards;
+	}
+	
+	function get_sprints($board_id){//Get all sprints for an agile board
+		$sprints = $this->jira_connect(array('board', $board_id, 'sprint'));
+		return $sprints;
+	}
+	
+	/*
+	 *Takes input from lack or url and checks if meeting issues have already been created for all of a projects FUTURE sprints on a per assignee basis
+	 *if none are found it creates them
+	 *Assignees are found either as a comma seperated strinf in the project description OR as a single user over ride in the $_GET['text']
+	 */
+	function create_meetings($project_key = null){
+		/*
+		 *Lets do some minimal validation and just die if anything fails
+		 */
+		if($_GET['token'] !== "zMt30ABKxewDQlfujov0APYr"){//If we don't get a valid token from slack, die
+			die();
+		}
+		if(!isset($_GET['text']) || strlen($_GET['text']) < 2){ //Check if $_GET['text'] wass passed in, if not send error message and die
+			$slack_payload = array (
+				'text' => 'Please supply a valid project name after the /artefacts'
+			);
+		
+			//Send encode and send the payload
+			header('Content-Type: application/json');
+			echo json_encode($slack_payload);
+			
+			die();
+		}
+		
+		$assignee_override = array();
+		if($project_key == null && isset($_GET['text'])){//If project key is null an $_GET is set then this is a request from slack and not a direct call to the URL. Validation above should have taken care of that anyway with the token
+			$text = explode(' ', $_GET['text']);//Did the user just supply a project or a user as well?
+			$project_key = $text[0];//We should always have a project
+			if(isset($text[1])){//If there is a second segement in the array this will be the user
+				$assignee_override[] = $text[1];
+			}
+		}
+		
+		$issues_created = 0;
+		$project = $this->get_project($project_key);//Get the project, we will need its ID and description later
+		if(isset($assignee_override[0])){//Check if a user override was supplied
+			$project_team = $assignee_override;//If it was use this instead of the user in the project description
+		}else{
+			$project_team = explode(',', $project->description);//We are storing the users in the project description as a comma seperated string. Turn this into an array
+		}
+		$project_boards = $this->get_boards($project_key);//Get all boards that this project is a part of
+		foreach($project_boards->values as $project_board){
+			$sprints = $this->get_sprints($project_board->id);//Get all sprints for this board
+			foreach($sprints->values as $sprint){
+				if($sprint->state == "future"){//If sprint is in the future
+					foreach($project_team as $assignee){//For each user in the production team
+						$jql = "project=" . $project_key . " AND assignee=" . $assignee . " AND sprint =" . $sprint->id . " AND labels = Meetings";
+						$results = $this->jql($this->config->item('jira_username'), $this->config->item('jira_password'), $jql);
+						$results = json_decode($results);
+						if($results->total == 0){//If there aren't any results lets create some!
+							if($this->create_meeting_issue($project->id, $sprint->id, $assignee) == true){//If the issue is successfully created increment the counter
+								++$issues_created;
+							}
+						}
+					}
+				}
+			}
+		}
+		$slack_payload = array (
+			'text' => $issues_created . ' JIRA Issues Created'
+		);
+	
+		//Send encode and send the payload
+		header('Content-Type: application/json');
+		echo json_encode($slack_payload);
 	}
 	
 	public function web_safe_jql_form(){ //Loads form for generating a JQL Websafe GET string
