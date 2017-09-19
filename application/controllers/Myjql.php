@@ -420,7 +420,8 @@ class Myjql extends CI_Controller {
 		);
 		
 		//Send encode and send the payload
-		$this->post_to_slack($_GET['response_url'], $slack_payload);
+		header('Content-Type: application/json');
+		echo json_encode($slack_payload);
 		
 	}
 	
