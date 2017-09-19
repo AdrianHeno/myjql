@@ -177,9 +177,15 @@ class Myjql extends CI_Controller {
 			);
 		}
 		//Slack only gives us 3 seconds to respond...Nothing happens in Jira in under 3 seconds, so send a responce once validation passes and then use the responce url to notify the user once the operation is complete
-		header('Content-Type: application/json');
+		ob_start();
+		header($_SERVER["SERVER_PROTOCOL"] . " 202 Accepted");
+		header("Status: 202 Accepted");
+		header("Content-Type: application/json");
 		echo json_encode($slack_payload);//Send a payload back to slack so that the user knows that we are working
-		header("Connection: close");
+		header('Content-Length: '.ob_get_length());
+		ob_end_flush();
+		ob_flush();
+		flush();
 		
 		$assignee_override = array();
 		if($project_key == null && isset($_GET['text'])){//If project key is null an $_GET is set then this is a request from slack and not a direct call to the URL. Validation above should have taken care of that anyway with the token
