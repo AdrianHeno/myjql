@@ -173,7 +173,7 @@ class Myjql extends CI_Controller {
 			die();
 		}else{
 			$slack_payload = array (
-				'text' => 'Working on that for you now, I will let you know when I have finished.'
+				'text' => 'Working on that for you now, I will let you know when its done.'
 			);
 		}
 		//Slack only gives us 3 seconds to respond...Nothing happens in Jira in under 3 seconds, so send a responce once validation passes and then use the responce url to notify the user once the operation is complete
@@ -236,10 +236,9 @@ class Myjql extends CI_Controller {
 		$curl = curl_init($url);
 		curl_setopt($curl, CURLOPT_HEADER, false);
 		curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-		curl_setopt($curl, CURLOPT_HTTPHEADER,
-				array("Content-type: application/json"));
+		curl_setopt($curl, CURLOPT_HTTPHEADER, array("Content-type: application/json"));
 		curl_setopt($curl, CURLOPT_POST, true);
-		curl_setopt($curl, CURLOPT_POSTFIELDS, $payload);
+		curl_setopt($curl, CURLOPT_POSTFIELDS, json_encode($payload));
 		
 		$json_response = curl_exec($curl);
 		
