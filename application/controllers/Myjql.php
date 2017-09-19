@@ -284,7 +284,16 @@ class Myjql extends CI_Controller {
 		$slack_payload = array (
 				'text' => 'You want a graph!? Ok give me a minute...'
 			);
-		
+		//Slack only gives us 3 seconds to respond...Nothing happens in Jira in under 3 seconds, so send a responce once validation passes and then use the responce url to notify the user once the operation is complete
+		ob_start();
+		header($_SERVER["SERVER_PROTOCOL"] . " 202 Accepted");
+		header("Status: 202 Accepted");
+		header("Content-Type: application/json");
+		echo json_encode($slack_payload);//Send a payload back to slack so that the user knows that we are working
+		header('Content-Length: '.ob_get_length());
+		ob_end_flush();
+		ob_flush();
+		flush();
 		
 		$current_sprint_id = $this->get_current_sprint_id($username, $password, $_GET['text']);
 		
@@ -410,9 +419,8 @@ class Myjql extends CI_Controller {
 			),
 		);
 		
-		//Send encode and send the payload
-		header('Content-Type: application/json');
-		echo json_encode($slack_payload);
+		//encode and send the payload
+		$this->post_to_slack($_GET['response_url'], $slack_payload);
 		
 	}
 	
