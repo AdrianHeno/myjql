@@ -274,13 +274,26 @@ class Myjql extends CI_Controller {
 			$slack_payload = array (
 				'text' => 'Please supply a valid project name after the /burndown'
 			);
-		
 			//Send encode and send the payload
 			header('Content-Type: application/json');
 			echo json_encode($slack_payload);
 			
 			die();
 		}
+		
+		$slack_payload = array (
+				'text' => 'You want a graph!? Ok give me a minute...'
+			);
+		//Slack only gives us 3 seconds to respond...Nothing happens in Jira in under 3 seconds, so send a responce once validation passes and then use the responce url to notify the user once the operation is complete
+		ob_start();
+		header($_SERVER["SERVER_PROTOCOL"] . " 202 Accepted");
+		header("Status: 202 Accepted");
+		header("Content-Type: application/json");
+		echo json_encode($slack_payload);//Send a payload back to slack so that the user knows that we are working
+		header('Content-Length: '.ob_get_length());
+		ob_end_flush();
+		ob_flush();
+		flush();
 		
 		$current_sprint_id = $this->get_current_sprint_id($username, $password, $_GET['text']);
 		
@@ -353,7 +366,6 @@ class Myjql extends CI_Controller {
 		 *Now that we have an array of days and an array of issues,
 		 *loop through the array of issues and add their value to the total for each day
 		 */
-		
 		foreach($issue_array as $issue){
 			if(isset($issue['done'])){
 				$sprint_days[$issue['done']] = $sprint_days[$issue['done']] + $issue['value'];
@@ -363,7 +375,6 @@ class Myjql extends CI_Controller {
 		/*
 		 *Now that we have all of the data in a useable format, build the graph URL
 		 */
-		
 		$bench_increment = round($total_hours/count($sprint_days), 2);
 		$bench_daily = $total_hours;
 
@@ -409,8 +420,7 @@ class Myjql extends CI_Controller {
 		);
 		
 		//Send encode and send the payload
-		header('Content-Type: application/json');
-		echo json_encode($slack_payload);
+		$this->post_to_slack($_GET['response_url'], $slack_payload);
 		
 	}
 	
