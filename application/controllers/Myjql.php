@@ -107,7 +107,7 @@ class Myjql extends CI_Controller {
 		curl_setopt($curl, CURLOPT_VERBOSE, true);
 		
 		$result = curl_exec($curl);
-		return true;
+		return TRUE;
 		
 	}
 	
@@ -213,7 +213,7 @@ class Myjql extends CI_Controller {
 						$results = $this->jql($this->config->item('jira_username'), $this->config->item('jira_password'), $jql);
 						$results = json_decode($results);
 						if($results->total == 0){//If there aren't any results lets create some!
-							if($this->create_meeting_issue($project->id, $sprint->id, $assignee) == true){//If the issue is successfully created increment the counter
+							if($this->create_meeting_issue($project->id, $sprint->id, $assignee) === TRUE){//If the issue is successfully created increment the counter
 								++$issues_created;
 							}
 						}
