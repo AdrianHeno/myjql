@@ -71,7 +71,9 @@ class Mytenkf extends CI_Controller {
 			
 			$assignments = $this->get_assignments($phase->id);
 			foreach($assignments->data as $assignment){
-				$project_hours = $project_hours + $assignment->fixed_hours;
+				if(isset($assignment->fixed_hours)){
+					$project_hours = $project_hours + $assignment->fixed_hours;
+				}
 			}
 			
 			$time_entries = $this->get_time_entries($phase->id);

@@ -270,7 +270,7 @@ class Myjql extends CI_Controller {
 	function burndown(){//This is a proof of concept and will need to be reworked if deemed worth the effort
 		$username = $this->config->item('jira_username');
 		$password = $this->config->item('jira_password');
-		if(!isset($_GET['text']) || strlen($_GET['text']) < 3){ //Check if $_GET['text'] wass passed in, if not send error message and die
+		if(!isset($_GET['text']) || strlen($_GET['text']) < 2){ //Check if $_GET['text'] wass passed in, if not send error message and die
 			$slack_payload = array (
 				'text' => 'Please supply a valid project name after the /burndown'
 			);
@@ -332,14 +332,22 @@ class Myjql extends CI_Controller {
 		//Find how much of the sprint has been completed
 		$total_seconds = 0;
 		$issue_array = array();
-		foreach($data->changes as $key => $changes){
-			if(isset($changes[0]->statC->newValue)){
-				$total_seconds = $total_seconds + $changes[0]->statC->newValue;//If the changes has hours add them to the total
+		foreach($data->changes as $key => $changes){//$changes is provided in chronological order, so we can just add remove add remove until we get to the end and we should have the right result
+			if(isset($changes[0]->statC->newValue)){//If an item has a value add it to the array
 				$issue_array[$changes[0]->key]['value'] = $changes[0]->statC->newValue;
+			}elseif(isset($changes[0]->added) && $changes[0]->added == false){//If the item has "added": false this means it was removed from the sprint and needs to be unset from our array
+				unset($issue_array[$changes[0]->key]);
 			}
-			if(isset($changes[0]->column->done) && $changes[0]->column->done == 'true'){
+			if(isset($changes[0]->column->done) && $changes[0]->column->done == true){//If done is true then record the timestamp it was completed
 				$issue_array[$changes[0]->key]['done'] = date("Y-m-d", substr($key, 0, -3));
 			}
+		}
+		
+		/*
+		 *Now that we have a clean array loop and count to get the total
+		 */
+		foreach($issue_array as $ia){
+			$total_seconds = $total_seconds + $ia['value'];//If the changes has hours add them to the total
 		}
 		$total_hours = ($total_seconds/60)/60;//Convert time from seconds to hours
 		
@@ -399,7 +407,6 @@ class Myjql extends CI_Controller {
 		//Using Image Charts to generate graphs https://image-charts.com/documentation
 		$chart_url = "https://image-charts.com/chart?cht=lc&chg=10,10,3,2&chd=t:" . $bench_string . "|" . $progress_string . "&chds=0," . $total_hours . "&chs=500x500&chco=999999,FF0000&chxt=x,y&chxr=0," . count($sprint_days) . ",0|1,0," . $total_hours  . "&chma=30,30,30,30";
 	
-		
 		/*
 		 *Create array to house payload for slack
 		 */
