@@ -295,12 +295,19 @@ class Myjql extends CI_Controller {
 		ob_flush();
 		flush();
 		
-		$current_sprint_id = $this->get_current_sprint_id($username, $password, $_GET['text']);
+		/*
+		 * The relationships between projects and boards is many to many.
+		 * We need to use the project Key to find the projects boards and hope there is only one board
+		 * The board ID is then used to build the URL to get the burndown json
+		 */
+		$boards = $this->get_boards($_GET['text']);
+		
+		$current_sprint_id = $this->get_current_sprint_id($username, $password, $_GET['text']);//Get the current sprint ID and use it to build the URL for the burndown json
 		
 		set_time_limit(600);
 		$return_json = TRUE;
 		//Call the atlassian graph data API
-		$url = "https://mentally-friendly.atlassian.net/rest/greenhopper/1.0/rapid/charts/scopechangeburndownchart.json?rapidViewId=12&sprintId=" . $current_sprint_id . "&statisticFieldId=field_timeoriginalestimate";
+		$url = "https://mentally-friendly.atlassian.net/rest/greenhopper/1.0/rapid/charts/scopechangeburndownchart.json?rapidViewId=" . $boards->values[0]->id . "&sprintId=" . $current_sprint_id . "&statisticFieldId=field_timeoriginalestimate";
 		$curl = curl_init();
 		curl_setopt($curl, CURLOPT_HTTPHEADER, array('Authorization: Basic ' . base64_encode("$username:$password")));
 		curl_setopt($curl, CURLOPT_URL, $url);
@@ -342,7 +349,7 @@ class Myjql extends CI_Controller {
 				$issue_array[$changes[0]->key]['done'] = date("Y-m-d", substr($key, 0, -3));
 			}
 		}
-		
+
 		/*
 		 *Now that we have a clean array loop and count to get the total
 		 */
