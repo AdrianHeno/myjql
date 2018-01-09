@@ -412,8 +412,8 @@ class Myjql extends CI_Controller {
 		$progress_string = $total_hours . $progress_string;
 
 		//Using Image Charts to generate graphs https://image-charts.com/documentation
-		$chart_url = "https://image-charts.com/chart?cht=lc&chg=10,10,3,2&chd=t:" . $bench_string . "|" . $progress_string . "&chds=0," . $total_hours . "&chs=500x500&chco=999999,FF0000&chxt=x,y&chxr=0," . count($sprint_days) . ",0|1,0," . $total_hours  . "&chma=30,30,30,30";
-	
+		$chart_url = "https://image-charts.com/chart?cht=lc&chg=10,10,3,2&chd=t:" . $bench_string . "|" . $progress_string . "&chds=0," . $total_hours . "&chs=500x500&chco=999999,FF0000&chxt=x,y&chxr=0,0," . count($sprint_days) . ",1|1,0," . $total_hours  . "&chma=30,30,30,30";
+
 		/*
 		 *Create array to house payload for slack
 		 */
